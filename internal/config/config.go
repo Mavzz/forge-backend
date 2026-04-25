@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Port       string
 	APIVersion string
+	JWTSecret  string
 	DB         DBConfig
 }
 
@@ -30,6 +31,7 @@ func LoadConfig() (*Config, error) {
 	config := &Config{
 		Port:       os.Getenv("PORT"),
 		APIVersion: os.Getenv("API_VERSION"),
+		JWTSecret:  os.Getenv("JWT_SECRET"),
 		DB: DBConfig{
 			User:     os.Getenv("PG_USER"),
 			Host:     os.Getenv("PG_HOST"),

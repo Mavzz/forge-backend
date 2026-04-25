@@ -1,15 +1,28 @@
 package models
 
-import (
-	"time"
-)
+// SignupRequest represents the signup request body
+type SignupRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
 
-type User struct {
-	ID        uint      `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"`
-	CreatedAt time.Time `json:"created_at"`
-	Tasks     []Task    `json:"tasks"`
-	Streaks   uint      `json:"streaks"`
+// LoginRequest represents the login request body
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// TokenResponse represents the token response
+type TokenResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	Username     string `json:"username,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Picture      string `json:"picture,omitempty"`
+}
+
+// RefreshTokenRequest represents refresh token request
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refreshToken"`
 }
