@@ -24,6 +24,7 @@ type LoginRequest struct {
 type TokenResponse struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`
+	UUID         string `json:"uuid,omitempty"`
 	Username     string `json:"username,omitempty"`
 	Email        string `json:"email,omitempty"`
 	Picture      string `json:"picture,omitempty"`

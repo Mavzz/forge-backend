@@ -61,7 +61,6 @@ Creates a new user.
 ```json
 {
   "id": 1,
-  "uuid": "8f5d5e53-2b87-4f6c-a6c1-6e0f06d0a5f8",
   "username": "alice",
   "email": "alice@example.com",
   "token": "<jwt-access-token>"
@@ -78,17 +77,34 @@ The token is an HMAC-signed JWT and includes a UUID token ID (`jti`) claim.
 
 ### 2) POST /login
 
-Current status: route exists, handler is not implemented yet.
+Authenticates an existing user.
 
-#### Current Response
-
-- Status: `501 Not Implemented`
+#### Request Body
 
 ```json
 {
-  "error": "login is not implemented yet"
+  "email": "alice@example.com",
+  "password": "strongpass123"
 }
 ```
+
+#### Success Response
+
+- Status: `200 OK`
+
+```json
+{
+  "accessToken": "<jwt-access-token>",
+  "refreshToken": "",
+  "uuid": "8f5d5e53-2b87-4f6c-a6c1-6e0f06d0a5f8"
+}
+```
+
+#### Common Error Responses
+
+- `400 Bad Request` for malformed JSON or invalid email format.
+- `401 Unauthorized` for invalid email/password.
+- `500 Internal Server Error` for token generation or dependency failures.
 
 ### 3) POST /logout
 

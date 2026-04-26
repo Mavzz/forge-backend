@@ -7,6 +7,7 @@ import (
 	"net/mail"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	sqlcdb "github.com/nvaditya/forge-backend/internal/db/sqlc"
 	"github.com/nvaditya/forge-backend/internal/models"
@@ -79,7 +80,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := utils.CreateAccessToken(createdUser.ID, createdUser.Email, jwtSigningKey)
+	if !createdUser.Uuid.Valid {
+		writeJSONError(w, http.StatusInternalServerError, "failed to load user uuid")
+		return
+	}
+	createdUserUUID := uuid.UUID(createdUser.Uuid.Bytes).String()
+
+	token, err := utils.CreateAccessToken(createdUser.ID, createdUserUUID, createdUser.Email, jwtSigningKey)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to generate token")
 		return
@@ -134,7 +141,13 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := utils.CreateAccessToken(user.ID, user.Email, jwtSigningKey)
+	if !user.Uuid.Valid {
+		writeJSONError(w, http.StatusInternalServerError, "failed to load user uuid")
+		return
+	}
+	userUUID := uuid.UUID(user.Uuid.Bytes).String()
+
+	token, err := utils.CreateAccessToken(user.ID, userUUID, user.Email, jwtSigningKey)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to generate token")
 		return
@@ -144,6 +157,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(models.TokenResponse{
 		AccessToken: token,
+		UUID:        userUUID,
 	})
 
 }
