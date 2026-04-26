@@ -9,7 +9,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nvaditya/forge-backend/internal/config"
 	"github.com/nvaditya/forge-backend/internal/db"
+	sqlcdb "github.com/nvaditya/forge-backend/internal/db/sqlc"
+	"github.com/nvaditya/forge-backend/internal/handlers"
 	"github.com/nvaditya/forge-backend/internal/middleware"
+	"github.com/nvaditya/forge-backend/internal/repository"
 	"github.com/nvaditya/forge-backend/internal/routes"
 )
 
@@ -37,6 +40,11 @@ func main() {
 	}
 
 	fmt.Println("Successfully connected to the database!")
+
+	queries := sqlcdb.New(pool)
+	repos := repository.NewRepositories(queries)
+	handlers.SetRepositories(repos)
+	handlers.SetJWTSecret(cfg.JWTSecret)
 
 	router := mux.NewRouter()
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret)

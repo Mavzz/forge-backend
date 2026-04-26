@@ -41,6 +41,7 @@ type Task struct {
 
 type User struct {
 	ID           int64              `json:"id"`
+	Uuid         pgtype.UUID        `json:"uuid"`
 	Name         string             `json:"name"`
 	Email        string             `json:"email"`
 	PasswordHash string             `json:"password_hash"`

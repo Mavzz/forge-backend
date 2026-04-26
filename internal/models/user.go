@@ -7,6 +7,13 @@ type SignupRequest struct {
 	Email    string `json:"email"`
 }
 
+type SignupResponse struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Token    string `json:"token"`
+}
+
 // LoginRequest represents the login request body
 type LoginRequest struct {
 	Username string `json:"username"`
