@@ -16,7 +16,7 @@ type SignupResponse struct {
 
 // LoginRequest represents the login request body
 type LoginRequest struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 

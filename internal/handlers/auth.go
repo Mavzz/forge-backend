@@ -96,7 +96,56 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
-	writeJSONError(w, http.StatusNotImplemented, "login is not implemented yet")
+	if repos == nil || len(jwtSigningKey) == 0 {
+		writeJSONError(w, http.StatusInternalServerError, "server dependencies are not initialized")
+		return
+	}
+
+	var req models.LoginRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	email := strings.TrimSpace(strings.ToLower(req.Email))
+	password := strings.TrimSpace(req.Password)
+
+	if email == "" || password == "" {
+		writeJSONError(w, http.StatusBadRequest, "email and password are required")
+		return
+	}
+
+	if _, err := mail.ParseAddress(email); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid email address")
+		return
+	}
+
+	user, err := repos.Users.GetUserByEmail(r.Context(), email)
+
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "invalid email or password")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "invalid email or password")
+		return
+	}
+
+	token, err := utils.CreateAccessToken(user.ID, user.Email, jwtSigningKey)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to generate token")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(models.TokenResponse{
+		AccessToken: token,
+	})
+
 }
 
 func LogoutUser(w http.ResponseWriter, r *http.Request) {
