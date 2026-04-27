@@ -1,6 +1,6 @@
 -- name: CreateTask :one
 INSERT INTO tasks (user_id, title, description, category_id, is_completed, due_date)
-VALUES ($1, $2, $3, $4, COALESCE($5, FALSE), $6)
+VALUES ($1, $2, $3, $4, COALESCE(sqlc.narg(is_completed), FALSE), $6)
 RETURNING id, user_id, title, description, category_id, is_completed, due_date, created_at, updated_at;
 
 -- name: ListTasksByUser :many
