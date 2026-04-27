@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/mail"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	sqlcdb "github.com/nvaditya/forge-backend/internal/db/sqlc"
 	"github.com/nvaditya/forge-backend/internal/middleware"
 	"github.com/nvaditya/forge-backend/internal/models"
@@ -28,6 +31,7 @@ func hashToken(token string) string {
 
 var repos *repository.Repositories
 var jwtSigningKey []byte
+var dbPool *pgxpool.Pool
 
 func SetRepositories(r *repository.Repositories) {
 	repos = r
@@ -35,6 +39,10 @@ func SetRepositories(r *repository.Repositories) {
 
 func SetJWTSecret(secret string) {
 	jwtSigningKey = []byte(secret)
+}
+
+func SetDB(pool *pgxpool.Pool) {
+	dbPool = pool
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +204,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
-	if repos == nil || len(jwtSigningKey) == 0 {
+	if repos == nil || len(jwtSigningKey) == 0 || dbPool == nil {
 		writeJSONError(w, http.StatusInternalServerError, "server dependencies are not initialized")
 		return
 	}
@@ -278,12 +286,32 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		newExpiry = newRefreshClaims.ExpiresAt.Time.UTC()
 	}
 
-	if _, err := repos.RefreshTokens.CreateRefreshToken(r.Context(), user.ID, hashToken(newRefreshToken), newExpiry); err != nil {
+	// Perform insert + revoke atomically in a single transaction so that token
+	// rotation cannot leave the database in a partially-updated state.
+	tx, err := dbPool.Begin(r.Context())
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to start session")
+		return
+	}
+	defer func() {
+		if rbErr := tx.Rollback(r.Context()); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			log.Printf("token rotation: failed to rollback transaction: %v", rbErr)
+		}
+	}()
+
+	txRepo := repository.NewRefreshTokenRepository(sqlcdb.New(tx))
+
+	if _, err := txRepo.CreateRefreshToken(r.Context(), user.ID, hashToken(newRefreshToken), newExpiry); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save session")
 		return
 	}
 
-	if err := repos.RefreshTokens.RevokeRefreshToken(r.Context(), tokenHash); err != nil {
+	if err := txRepo.RevokeRefreshToken(r.Context(), tokenHash); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to rotate session")
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to rotate session")
 		return
 	}

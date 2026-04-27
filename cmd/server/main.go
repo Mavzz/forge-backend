@@ -15,6 +15,7 @@ import (
 	"github.com/nvaditya/forge-backend/internal/middleware"
 	"github.com/nvaditya/forge-backend/internal/repository"
 	"github.com/nvaditya/forge-backend/internal/routes"
+	"github.com/nvaditya/forge-backend/internal/utils"
 )
 
 func main() {
@@ -46,6 +47,10 @@ func main() {
 	repos := repository.NewRepositories(queries)
 	handlers.SetRepositories(repos)
 	handlers.SetJWTSecret(cfg.JWTSecret)
+	handlers.SetDB(pool)
+
+	// Start background cleanup of expired in-memory revoked-token entries.
+	utils.StartTokenCleanup(context.Background(), 5*time.Minute)
 
 	router := mux.NewRouter()
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret)

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -82,20 +83,56 @@ func IsTokenRevoked(tokenID string) bool {
 
 	now := time.Now().UTC()
 
-	revokedTokensMu.Lock()
-	defer revokedTokensMu.Unlock()
-
+	// Use a read lock for the common (non-expired) path to reduce contention.
+	revokedTokensMu.RLock()
 	expiry, exists := revokedTokenIDs[tokenID]
+	revokedTokensMu.RUnlock()
+
 	if !exists {
 		return false
 	}
 
-	if !expiry.After(now) {
-		delete(revokedTokenIDs, tokenID)
-		return false
+	if expiry.After(now) {
+		return true
 	}
 
-	return true
+	// Entry has expired – promote to write lock to delete it (re-check to avoid race).
+	revokedTokensMu.Lock()
+	expiry, exists = revokedTokenIDs[tokenID]
+	if exists && !expiry.After(now) {
+		delete(revokedTokenIDs, tokenID)
+	}
+	revokedTokensMu.Unlock()
+
+	return false
+}
+
+// StartTokenCleanup starts a background goroutine that periodically removes
+// expired entries from the in-memory revoked-token map to prevent unbounded growth.
+func StartTokenCleanup(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				purgeExpiredTokens()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func purgeExpiredTokens() {
+	now := time.Now().UTC()
+	revokedTokensMu.Lock()
+	defer revokedTokensMu.Unlock()
+	for id, expiry := range revokedTokenIDs {
+		if !expiry.After(now) {
+			delete(revokedTokenIDs, id)
+		}
+	}
 }
 
 func createToken(userID int64, userUUID, email, tokenType string, ttl time.Duration, jwtSigningKey []byte) (string, error) {
