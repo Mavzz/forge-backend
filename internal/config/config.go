@@ -24,7 +24,7 @@ type DBConfig struct {
 
 func LoadConfig() (*Config, error) {
 	err := godotenv.Load()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("error loading .env file: %v", err)
 	}
 
