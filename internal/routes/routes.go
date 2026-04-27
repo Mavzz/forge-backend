@@ -17,6 +17,7 @@ func Routes(router *mux.Router, cfg *config.Config, authMiddleware *middleware.A
 	// Public user routes
 	apiRouter.HandleFunc("/signup", handlers.CreateUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/login", handlers.LoginUser).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/refresh", handlers.RefreshToken).Methods("POST", "OPTIONS")
 
 	// Protected user routes
 	protected := apiRouter.NewRoute().Subrouter()

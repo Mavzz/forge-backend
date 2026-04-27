@@ -19,7 +19,8 @@
       "data": {
         "base_url": "http://localhost:8080",
         "api_version": "/api/v1",
-        "bearer_token": ""
+        "bearer_token": "",
+        "refresh_token": ""
       }
     },
     {
@@ -88,6 +89,36 @@
       "settingFollowRedirects": "global",
       "_created": 1760000000001,
       "_modified": 1760000000001
+    },
+    {
+      "_id": "req_refresh",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Refresh",
+      "method": "POST",
+      "url": "{{ _.base_url }}{{ _.api_version }}/refresh",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refreshToken\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1.5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_created": 1760000000002,
+      "_modified": 1760000000002
     },
     {
       "_id": "req_logout",

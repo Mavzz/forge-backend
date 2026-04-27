@@ -95,7 +95,7 @@ Authenticates an existing user.
 ```json
 {
   "accessToken": "<jwt-access-token>",
-  "refreshToken": "",
+  "refreshToken": "<jwt-refresh-token>",
   "uuid": "8f5d5e53-2b87-4f6c-a6c1-6e0f06d0a5f8"
 }
 ```
@@ -106,23 +106,66 @@ Authenticates an existing user.
 - `401 Unauthorized` for invalid email/password.
 - `500 Internal Server Error` for token generation or dependency failures.
 
-### 3) POST /logout
+### 3) POST /refresh
 
-Current status: protected route exists, handler is not implemented yet.
+Refreshes an expired/expiring access token using a valid refresh token.
+
+#### Request Body
+
+```json
+{
+  "refreshToken": "<jwt-refresh-token>"
+}
+```
+
+#### Success Response
+
+- Status: `200 OK`
+
+```json
+{
+  "accessToken": "<jwt-access-token>",
+  "refreshToken": "<jwt-refresh-token>",
+  "uuid": "8f5d5e53-2b87-4f6c-a6c1-6e0f06d0a5f8"
+}
+```
+
+#### Common Error Responses
+
+- `400 Bad Request` for malformed JSON or missing `refreshToken`.
+- `401 Unauthorized` for invalid, expired, or revoked refresh tokens.
+
+### 4) POST /logout
+
+Invalidates the current access token. If a `refreshToken` is included in the body, that refresh token is revoked as well.
 
 #### Authentication
 
 Requires bearer authentication middleware.
 
-#### Current Response
-
-- Status: `501 Not Implemented`
+#### Request Body (optional)
 
 ```json
 {
-  "error": "logout is not implemented yet"
+  "refreshToken": "<jwt-refresh-token>"
 }
 ```
+
+#### Success Response
+
+- Status: `200 OK`
+
+```json
+{
+  "message": "logged out successfully"
+}
+```
+
+#### Common Error Responses
+
+- `400 Bad Request` for malformed JSON body.
+- `401 Unauthorized` for invalid/expired access token or refresh token.
+- `403 Forbidden` if provided refresh token belongs to another user.
 
 ## CORS / OPTIONS
 

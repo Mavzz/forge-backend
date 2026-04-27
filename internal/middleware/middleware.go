@@ -3,12 +3,12 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/nvaditya/forge-backend/internal/utils"
 )
 
 type contextKey string
@@ -16,18 +16,16 @@ type contextKey string
 const authClaimsContextKey contextKey = "auth_claims"
 
 type Claims struct {
-	UserID int64
-	Email  string
+	UserID    int64
+	Email     string
+	Subject   string
+	TokenID   string
+	TokenType string
+	ExpiresAt time.Time
 }
 
 type AuthMiddleware struct {
 	jwtSecret []byte
-}
-
-type JWTClaims struct {
-	UserID int64  `json:"user_id"`
-	Email  string `json:"email,omitempty"`
-	jwt.RegisteredClaims
 }
 
 func NewAuthMiddleware(jwtSecret string) *AuthMiddleware {
@@ -81,27 +79,31 @@ func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		}
 
 		tokenString := parts[1]
-		claims := &JWTClaims{}
-
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
-			}
-			return am.jwtSecret, nil
-		})
-		if err != nil || !token.Valid {
+		claims, err := utils.ParseAndValidateToken(tokenString, am.jwtSecret)
+		if err != nil {
 			writeJSONError(w, http.StatusUnauthorized, "invalid token")
 			return
 		}
 
-		if claims.UserID <= 0 {
-			writeJSONError(w, http.StatusUnauthorized, "invalid token claims")
+		if claims.TokenType == utils.TokenTypeRefresh {
+			writeJSONError(w, http.StatusUnauthorized, "refresh token cannot be used for this endpoint")
+			return
+		}
+
+		if utils.IsTokenRevoked(claims.ID) {
+			writeJSONError(w, http.StatusUnauthorized, "token has been revoked")
 			return
 		}
 
 		requestClaims := Claims{
-			UserID: claims.UserID,
-			Email:  claims.Email,
+			UserID:    claims.UserID,
+			Email:     claims.Email,
+			Subject:   claims.Subject,
+			TokenID:   claims.ID,
+			TokenType: claims.TokenType,
+		}
+		if claims.ExpiresAt != nil {
+			requestClaims.ExpiresAt = claims.ExpiresAt.Time.UTC()
 		}
 		ctx := context.WithValue(r.Context(), authClaimsContextKey, requestClaims)
 		next.ServeHTTP(w, r.WithContext(ctx))

@@ -11,11 +11,14 @@ import (
 type Querier interface {
 	CompleteTask(ctx context.Context, id int64) (Task, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
+	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateStreak(ctx context.Context, userID int64) (Streak, error)
 	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteExpiredRefreshTokens(ctx context.Context) error
 	DeleteTask(ctx context.Context, id int64) error
 	GetCategoryByID(ctx context.Context, id int64) (Category, error)
+	GetRefreshToken(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetStreakByUserID(ctx context.Context, userID int64) (Streak, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
@@ -23,6 +26,8 @@ type Querier interface {
 	ListTasksByUser(ctx context.Context, userID int64) ([]Task, error)
 	MarkStreakCompletedToday(ctx context.Context, userID int64) (Streak, error)
 	ResetDailyCompletionFlags(ctx context.Context) error
+	RevokeAllRefreshTokensByUser(ctx context.Context, userID int64) error
+	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 	UpdateUserStreaks(ctx context.Context, arg UpdateUserStreaksParams) (User, error)
 }
 
