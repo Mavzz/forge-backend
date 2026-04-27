@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/nvaditya/forge-backend/internal/config"
@@ -63,6 +64,14 @@ func main() {
 
 	// Start the server
 	fmt.Printf("Server is running on port %s\n", cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
+	srv := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 
 }
